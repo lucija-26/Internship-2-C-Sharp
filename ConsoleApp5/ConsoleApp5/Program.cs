@@ -1,12 +1,10 @@
-﻿using System.Diagnostics;
-using System.Globalization;
-
-namespace ConsoleApp4
+﻿namespace ConsoleApp4
 {
     internal class Program
     {
         static void Main(string[] args)
         {
+            int predefinedPassword = 1234;
             mainMenu();
             Console.WriteLine("Vas odabir: ");
             var articles = new Dictionary<string, (int quantity, double price, DateTime date)>()
@@ -22,8 +20,7 @@ namespace ConsoleApp4
 
 
             };
-            var choice = 0;
-            int.TryParse(Console.ReadLine(), out choice);
+            var choice = getInt();
             while (choice != 0)
             {
                 switch (choice)
@@ -31,7 +28,7 @@ namespace ConsoleApp4
                     case 1:
                         articlesMenu();
                         Console.WriteLine("Vas odabir: ");
-                        _ = int.TryParse(Console.ReadLine(), out choice);
+                        choice = getInt();
                         switch (choice)
                         {
                             case 1:
@@ -71,8 +68,7 @@ namespace ConsoleApp4
                         break;
                     case 2:
                         employesMenu();
-                        int editEmployesChoice;
-                        _ = int.TryParse(Console.ReadLine(), out editEmployesChoice);
+                        int editEmployesChoice = getInt();
                         switch (editEmployesChoice)
                         {
                             case 1:
@@ -92,8 +88,7 @@ namespace ConsoleApp4
                         break;
                     case 3:
                         receiptsMenu();
-                        int receiptsChoice;
-                        _ = int.TryParse(Console.ReadLine(), out receiptsChoice);
+                        int receiptsChoice = getInt();
                         switch (receiptsChoice)
                         {
                             case 1:
@@ -106,11 +101,47 @@ namespace ConsoleApp4
                                 break;
                         }
                         break;
+                    case 4:
+                        Console.WriteLine("Unesite sifru za nastavak: ");
+                        int password = getInt();
+                        if (password == predefinedPassword)
+                            statisticsMenu(receipts, articles, employes);
+                        else
+                        {
+                            Console.WriteLine("Netocna lozinka");
+                        }
+                        break;
+                    default:
+                        Console.WriteLine("Unesite neku od ponudjenih opcija");
+                        break;
 
                 };
                 mainMenu();
                 Console.WriteLine("Vas odabir: ");
                 _ = int.TryParse(Console.ReadLine(), out choice);
+            }
+        }
+
+        static void statisticsMenu(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts, Dictionary<string, (int quantity, double price, DateTime date)> articles, Dictionary<string, DateTime> employes)
+        {
+            Console.WriteLine("1 - Ukupan broj artikala u trgovini");
+            Console.WriteLine("2 - Vrijednost artikala koji nisu još prodani");
+            Console.WriteLine("3 - Vrijednost svih artikala koji su prodani");
+            Console.WriteLine("4 - Stanje po mjesecima");
+            int statisticsChoice = getInt();
+            switch (statisticsChoice)
+            {
+                case 1:
+                    totalNumberOfArticles(articles);
+                    break;
+                case 2:
+                    totalPriceOfUnsoldArticles(articles);
+                    break;
+                case 3:
+                    totalPriceOfSoldArticles(receipts);
+                    break;
+                case 4:
+                    break;
             }
         }
 
@@ -243,6 +274,69 @@ namespace ConsoleApp4
             }
         }
 
+        static void statusPerMonth(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts)
+        {
+            Console.WriteLine("Unesite datum i godinu za koji želite izračunati stanje (MM/YYYY):");
+            string userInput = Console.ReadLine();
+
+            if (DateTime.TryParseExact(userInput, "MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime selectedMonth))
+            {
+                Console.WriteLine("Unesite iznos placa: ");
+                float iznosPlaca = getFloat();
+                Console.WriteLine("Unesite iznos najma: ");
+                float iznosNajma = getFloat();
+                Console.WriteLine("Unesite iznos ostalih troskova: ");
+                float ostaliTroskovi = getFloat();
+
+                float ukupniTroskovi = iznosPlaca + iznosNajma + ostaliTroskovi;
+
+                float ukupnoZaradjenoUMjesecu = receipts
+                    .Where(r => r.Value.dateOfReceipt.Month == selectedMonth.Month && r.Value.dateOfReceipt.Year == selectedMonth.Year)
+                    .Sum(r => r.Value.totalPrice);
+
+                float stanjePoMjesecu = (ukupnoZaradjenoUMjesecu * (1.0f / 3.0f)) - ukupniTroskovi;
+
+                Console.WriteLine($"Stanje u {selectedMonth.ToString("MMMM yyyy")}: {stanjePoMjesecu:C}");
+            }
+            else
+            {
+                Console.WriteLine("Neispravan unos datuma.");
+            }
+        }
+
+        static void totalPriceOfSoldArticles(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts)
+        {
+            float total = 0;
+            foreach (var receipt in receipts)
+            {
+                total += receipt.Value.totalPrice;
+
+            }
+            Console.WriteLine("Vrijednost artikala koji su prodani " + total);
+        }
+        static void totalPriceOfUnsoldArticles(Dictionary<string, (int quantity, double price, DateTime date)> articles)
+        {
+            float total = 0;
+
+            foreach (var article in articles)
+            {
+                total += (float)article.Value.price * article.Value.quantity;
+            }
+            Console.WriteLine("Vrijednost artikala koji nisu prodani" + total);
+        }
+
+        static void totalNumberOfArticles(Dictionary<string, (int quantity, double price, DateTime date)> articles)
+        {
+            int total = 0;
+
+            foreach (var article in articles)
+            {
+                total += article.Value.quantity;
+            }
+            Console.WriteLine($"Ukupan broj artikala je {total}.");
+
+        }
+
         static void inputReceipt(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts, Dictionary<string, (int quantity, double price, DateTime date)> articles)
         {
             Console.WriteLine("Trenutno dostupni proizvodi: ");
@@ -326,7 +420,7 @@ namespace ConsoleApp4
             Console.WriteLine("2 - Odabir računa po ID-u");
             int receiptsChoice;
             int.TryParse(Console.ReadLine(), out receiptsChoice);
-            switch(receiptsChoice)
+            switch (receiptsChoice)
             {
                 case 1:
                     printAllReceipts(receipts);
@@ -363,7 +457,7 @@ namespace ConsoleApp4
         }
 
 
-    static void printEmployesByBirthday(Dictionary<string, DateTime> employes)
+        static void printEmployesByBirthday(Dictionary<string, DateTime> employes)
         {
             var currentMonth = DateTime.Now.Month;
             foreach (var employee in employes)
