@@ -62,7 +62,7 @@
                                 break;
                             case 4:
                                 printMenu();
-                                printArticlesChoice(articles);
+                                printArticlesChoice(articles, receipts);
                                 break;
                         }
                         break;
@@ -141,6 +141,7 @@
                     totalPriceOfSoldArticles(receipts);
                     break;
                 case 4:
+                    statusPerMonth(receipts);
                     break;
             }
         }
@@ -639,6 +640,67 @@
                     Console.WriteLine($"{article.Key} ({article.Value.quantity}) - {article.Value.price} - broj dana do isteka roka ({Math.Abs(numberOfDays)})");
             }
         }
+
+        static void printWorstsellingArticle(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts, Dictionary<string, (int quantity, double price, DateTime date)> articles)
+        {
+            Dictionary<string, int> totalSalesByArticle = new Dictionary<string, int>();
+            foreach (var receipt in receipts.Values)
+            {
+                foreach (var item in receipt.article)
+                {
+                    if (totalSalesByArticle.ContainsKey(item.nameOfArticle))
+                    {
+                        totalSalesByArticle[item.nameOfArticle] += item.quantity;
+                    }
+                    else
+                    {
+                        totalSalesByArticle[item.nameOfArticle] = item.quantity;
+                    }
+                }
+            }
+            var leastSellingArticle = totalSalesByArticle.OrderBy(pair => pair.Value).FirstOrDefault();
+
+            if (leastSellingArticle.Key != null)
+            {
+                Console.WriteLine($"Najmanje prodavaniji artikal: {leastSellingArticle.Key}, Prodano: {leastSellingArticle.Value} komada");
+            }
+            else
+            {
+                Console.WriteLine("Nema dostupnih podataka o prodaji.");
+            }
+        }
+
+        static void printBestsellingArticle(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts, Dictionary<string, (int quantity, double price, DateTime date)> articles)
+        {
+            Dictionary<string, int> totalSalesByArticle = new Dictionary<string, int>();
+            foreach (var receipt in receipts.Values)
+            {
+                foreach (var item in receipt.article)
+                {
+                    if (totalSalesByArticle.ContainsKey(item.nameOfArticle))
+                    {
+                        totalSalesByArticle[item.nameOfArticle] += item.quantity;
+                    }
+                    else
+                    {
+                        totalSalesByArticle[item.nameOfArticle] = item.quantity;
+                    }
+                }
+            }
+
+            var bestSellingArticle = totalSalesByArticle.OrderByDescending(pair => pair.Value).FirstOrDefault();
+
+            if (bestSellingArticle.Key != null)
+            {
+                Console.WriteLine($"Najprodavaniji artikal: {bestSellingArticle.Key}, Prodano: {bestSellingArticle.Value} komada");
+            }
+            else
+            {
+                Console.WriteLine("Nema dostupnih podataka o prodaji.");
+            }
+        }
+
+
         static void printArticlesByDateAscending(Dictionary<string, (int quantity, double price, DateTime date)> articles)
         {
             var sortedByAscendingDate = articles.OrderBy(kvp => kvp.Value.date);
@@ -691,7 +753,7 @@
                     Console.WriteLine($"{article.Key} ({article.Value.quantity}) - {article.Value.price} - broj dana do isteka roka ({Math.Abs(numberOfDays)})");
             }
         }
-        static void printArticlesChoice(Dictionary<string, (int quantity, double price, DateTime date)> articles)
+        static void printArticlesChoice(Dictionary<string, (int quantity, double price, DateTime date)> articles, Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts)
         {
             var choice = Console.ReadLine();
             switch (choice.ToLower())
@@ -712,8 +774,10 @@
                     printArticlesByQuantity(articles);
                     break;
                 case "f":
+                    printBestsellingArticle(receipts, articles);
                     break;
                 case "g":
+                    printWorstsellingArticle(receipts, articles);
                     break;
             }
         }
