@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 
 namespace ConsoleApp4
 {
@@ -16,6 +17,11 @@ namespace ConsoleApp4
         {
             {"Tea Bubic", new DateTime(2003, 01, 28)}
         };
+            var receipts = new Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)>()
+            {
+
+
+            };
             var choice = 0;
             int.TryParse(Console.ReadLine(), out choice);
             while (choice != 0)
@@ -84,6 +90,22 @@ namespace ConsoleApp4
 
                         }
                         break;
+                    case 3:
+                        receiptsMenu();
+                        int receiptsChoice;
+                        _ = int.TryParse(Console.ReadLine(), out receiptsChoice);
+                        switch (receiptsChoice)
+                        {
+                            case 1:
+                                inputReceipt(receipts, articles);
+                                break;
+                            case 2:
+                                printReceipts(receipts, articles, employes);
+                                break;
+                            case 3:
+                                break;
+                        }
+                        break;
 
                 };
                 mainMenu();
@@ -92,6 +114,12 @@ namespace ConsoleApp4
             }
         }
 
+        static void receiptsMenu()
+        {
+            Console.WriteLine("1 - Unos novog racuna");
+            Console.WriteLine("2 - Ispis");
+            Console.WriteLine("3 - Povratak na glavni izbornik");
+        }
 
         static void mainMenu()
         {
@@ -215,13 +243,132 @@ namespace ConsoleApp4
             }
         }
 
+        static void inputReceipt(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts, Dictionary<string, (int quantity, double price, DateTime date)> articles)
+        {
+            Console.WriteLine("Trenutno dostupni proizvodi: ");
+            printArticle(articles);
+            int newReceiptID = receipts.Keys.Any() ? receipts.Keys.Max() + 1 : 1;
+            float totalPrice = 0;
+            List<(string nameOfArticle, int quantity, float price)> receiptItems = new List<(string nameOfArticle, int quantity, float price)>();
+            string nameOfArticle;
 
-        static void printEmployesByBirthday(Dictionary<string, DateTime> employes)
+            while (true)
+            {
+                Console.Write("Upišite ime proizvoda ili 'kraj' za završetak unosa: ");
+                nameOfArticle = Console.ReadLine().ToLower();
+
+                if (nameOfArticle == "kraj")
+                {
+                    break;
+                }
+
+                if (articles.TryGetValue(nameOfArticle, out var article))
+                {
+                    if (receiptItems.Any(s => s.nameOfArticle == nameOfArticle))
+                    {
+                        Console.WriteLine("Proizvod već unesen. Unesite drugi proizvod.");
+                        continue;
+                    }
+
+                    Console.Write("Upišite količinu: ");
+                    int quantity = getInt();
+
+                    float totalPriceOfArticle = quantity * (float)article.price;
+
+                    receiptItems.Add((nameOfArticle, quantity, totalPriceOfArticle));
+                    totalPrice += totalPriceOfArticle;
+
+                    articles[nameOfArticle] = (article.quantity - quantity, article.price, article.date);
+                }
+                else
+                {
+                    Console.WriteLine("Proizvod nije pronađen. Molimo unesite ispravno ime proizvoda.");
+                }
+            }
+
+            DateTime timeOfIssuing = DateTime.Now;
+            receipts.Add(newReceiptID, (timeOfIssuing, totalPrice, receiptItems));
+
+            Console.WriteLine($"Račun ID: {newReceiptID}, Vrijeme Izdavanja: {timeOfIssuing}, Ukupna Cijena: {totalPrice}");
+
+            Console.Write("Pritisnite 'c' za potvrdu računa ili 'p' za poništenje: ");
+            char choice = Console.ReadKey().KeyChar;
+
+            if (choice == 'c')
+            {
+                articles = articles.Where(p => p.Value.quantity > 0).ToDictionary(p => p.Key, p => p.Value);
+                Console.WriteLine("\nRačun je potvrđen. Artikli su ažurirani.");
+            }
+            else if (choice == 'p')
+            {
+                foreach (var item in receiptItems)
+                {
+                    if (articles.TryGetValue(item.nameOfArticle, out var originalArticle))
+                    {
+                        articles[item.nameOfArticle] = (originalArticle.quantity + item.quantity, originalArticle.price, originalArticle.date);
+                    }
+                    else
+                    {
+                        articles.Add(item.nameOfArticle, (item.quantity, item.price, DateTime.Now));
+                    }
+                }
+                Console.WriteLine("\nRačun je poništen. Artikli su vraćeni na stanje prije unosa računa.");
+            }
+            else
+            {
+                Console.WriteLine("\nNepoznata akcija. Radnja nije izvršena.");
+            }
+        }
+
+        static void printReceipts(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts, Dictionary<string, (int quantity, double price, DateTime date)> articles, Dictionary<string, DateTime> employes)
+        {
+            Console.WriteLine("1 - Ispis svih računa");
+            Console.WriteLine("2 - Odabir računa po ID-u");
+            int receiptsChoice;
+            int.TryParse(Console.ReadLine(), out receiptsChoice);
+            switch(receiptsChoice)
+            {
+                case 1:
+                    printAllReceipts(receipts);
+                    break;
+                case 2:
+                    printReceiptsByID(receipts);
+                    break;
+            }
+
+        }
+
+        static void printReceiptsByID(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts)
+        {
+            Console.Write("Unesite ID računa za ispis detalja: ");
+            if (int.TryParse(Console.ReadLine(), out int selectedReceiptId) && receipts.ContainsKey(selectedReceiptId))
+            {
+                var selectedReceipt = receipts[selectedReceiptId];
+                foreach (var stavka in selectedReceipt.article)
+                {
+                    Console.WriteLine($"{stavka.nameOfArticle} - Količina: {stavka.quantity}, Cijena: {stavka.price}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Neispravan ID računa ili račun nije pronađen.");
+            }
+        }
+        static void printAllReceipts(Dictionary<int, (DateTime dateOfReceipt, float totalPrice, List<(string nameOfArticle, int quantity, float price)> article)> receipts)
+        {
+            foreach (var receipt in receipts)
+            {
+                Console.WriteLine($"{receipt.Key} - {receipt.Value.dateOfReceipt} - {receipt.Value.totalPrice}");
+            }
+        }
+
+
+    static void printEmployesByBirthday(Dictionary<string, DateTime> employes)
         {
             var currentMonth = DateTime.Now.Month;
-            foreach(var employee in employes)
+            foreach (var employee in employes)
             {
-                if(currentMonth == employee.Value.Month)
+                if (currentMonth == employee.Value.Month)
                     Console.WriteLine(employee.Key);
             }
         }
@@ -229,7 +376,7 @@ namespace ConsoleApp4
         static void printEmployes(Dictionary<string, DateTime> employes)
         {
             var currentTime = DateTime.Now;
-            foreach(var employee in employes)
+            foreach (var employee in employes)
             {
                 int age = currentTime.Year - employee.Value.Year;
                 Console.WriteLine($"{employee.Key} - {age}");
@@ -242,7 +389,7 @@ namespace ConsoleApp4
             Console.WriteLine("c - Povratak");
             string choice = Console.ReadLine();
             var status = true;
-            while(true)
+            while (true)
             {
                 switch (choice)
                 {
@@ -260,7 +407,7 @@ namespace ConsoleApp4
                         break;
                 }
             }
-            
+
         }
 
         static void editEmployeeName(Dictionary<string, DateTime> employes)
@@ -305,7 +452,7 @@ namespace ConsoleApp4
                 Console.WriteLine("b - Datum rodjenja");
                 Console.WriteLine("c - povratak na prosli izbornik");
                 string choice = Console.ReadLine();
-                switch(choice)
+                switch (choice)
                 {
                     case "a":
                         editEmployeeName(employes);
